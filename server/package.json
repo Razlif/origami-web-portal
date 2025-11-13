@@ -1,0 +1,31 @@
+{
+  "name": "origami-portal-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "index.js",
+  "workspaces": ["client"],
+  "scripts": {
+    "postinstall": "node ./scripts/install-client.js",
+    "ensure:favicon": "node ./scripts/ensure-favicon.js",
+    "dev": "node ./scripts/ensure-favicon.js && concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "nodemon index.js",
+    "dev:client": "cd client && npx vite --port 5173",
+    "build": "node ./scripts/ensure-favicon.js && cd client && npx vite build",
+    "start": "node ./scripts/ensure-favicon.js && node index.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.8",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.3",
+    "express-rate-limit": "^7.0.0",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "concurrently": "^8.2.0",
+    "nodemon": "^3.1.0"
+  }
+}

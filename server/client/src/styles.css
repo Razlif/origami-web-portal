@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+    --color-background: #f4f6fb;
+    --color-surface: #ffffff;
+    --color-surface-elevated: #ffffff;
+    --color-border: #d8e0f0;
+    --color-muted: #556480;
+    --color-strong: #142033;
+    --color-soft: #70829f;
+    --color-accent: #1c7ed6;
+    direction: rtl;
+    font-family: 'Rubik', 'Assistant', 'Segoe UI', Tahoma, sans-serif;
+  }
+
+  :root.dark {
+    color-scheme: dark;
+    --color-background: #0f1729;
+    --color-surface: #111c33;
+    --color-surface-elevated: #182544;
+    --color-border: #1f2f4f;
+    --color-muted: #9db3d8;
+    --color-strong: #f1f5ff;
+    --color-soft: #7b8cab;
+    --color-accent: #4dabf7;
+  }
+
+  html,
+  body {
+    min-height: 100%;
+    background-color: var(--color-background);
+    color: var(--color-strong);
+  }
+
+  body,
+  button,
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+  }
+
+  ::selection {
+    background-color: rgba(76, 171, 247, 0.35);
+  }
+}
+
+@layer components {
+  .card {
+    border-radius: 1.25rem;
+    border: 1px solid var(--color-border);
+    background-color: var(--color-surface);
+    box-shadow: 0 12px 35px rgba(15, 23, 42, 0.08);
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+  }
+
+  .panel {
+    border-radius: 1.75rem;
+    border: 1px solid var(--color-border);
+    background-color: var(--color-surface-elevated);
+    box-shadow: 0 20px 45px rgba(15, 23, 42, 0.12);
+  }
+
+  .text-muted {
+    color: var(--color-muted);
+  }
+
+  .text-strong {
+    color: var(--color-strong);
+  }
+
+  .bg-surface {
+    background-color: var(--color-surface);
+  }
+
+  .bg-surface-elevated {
+    background-color: var(--color-surface-elevated);
+  }
+
+  .border-soft {
+    border-color: var(--color-border);
+  }
+
+  .shadow-soft {
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  }
+}
