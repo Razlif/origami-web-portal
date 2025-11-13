@@ -6,7 +6,7 @@ A friendly, read-only dashboard for Origami CRM data.
 
 ## Key Features
 
-1. **Build dashboards** – Create pages and add widgets such as tables, bar charts,pie charts and so on. Use data filtersand arrange the page visually.
+1. **Build dashboards** – Create pages and add widgets such as tables, bar charts,pie charts and so on. Use data filters and arrange the page visually.
 2. **Manage access** – Create users and assign them access to specific pages.
 3. **Read-only experience** – Current portal versionis read only
 4. **File-backed storage** – The server does not ship with a database. Users, pages, and structure metadata live in JSON files under `server/data/`.
