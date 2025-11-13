@@ -17,13 +17,13 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   return children;
 };
 
-  const AdminRoute = ({ children }: { children: JSX.Element }) => {
-    const { role } = useSession();
-    if (role !== 'admin') {
-      return <Navigate to="/pages" replace />;
-    }
-    return children;
-  };
+const AdminRoute = ({ children }: { children: JSX.Element }) => {
+  const { role } = useSession();
+  if (role !== 'admin') {
+    return <Navigate to="/pages" replace />;
+  }
+  return children;
+};
 
 export const App = () => {
   const { isAuthenticated } = useSession();
@@ -46,7 +46,7 @@ export const App = () => {
         }
       } catch (err) {
         if (active) {
-          setError('לא ניתן לטעון את מבנה אוריגמי.');
+          setError('Unable to load the Origami structure.');
         }
       } finally {
         if (active) {
@@ -71,7 +71,7 @@ export const App = () => {
   }
 
   if (initializing) {
-    return <p className="p-6 text-sm text-muted">טוען את הפורטל…</p>;
+    return <p className="p-6 text-sm text-muted">Loading the portal…</p>;
   }
 
   return (

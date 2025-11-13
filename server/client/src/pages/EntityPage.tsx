@@ -39,7 +39,7 @@ export const EntityPage = () => {
           setError('');
         }
       } catch (loadError) {
-          setError('לא ניתן לטעון את נתוני הישות.');
+        setError('Unable to load entity data.');
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -64,7 +64,7 @@ export const EntityPage = () => {
   }, [entityName]);
 
   if (!entity) {
-    return <p className="p-6 text-sm text-muted">הישות לא נמצאה.</p>;
+    return <p className="p-6 text-sm text-muted">Entity not found.</p>;
   }
 
   return (
@@ -72,7 +72,7 @@ export const EntityPage = () => {
       <header className="flex flex-col gap-4 rounded-3xl border border-soft bg-surface-elevated p-6 shadow-soft sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <h2 className="text-2xl font-bold text-strong">{entity.label ?? entity.name}</h2>
-          <p className="text-sm text-muted">רענון אוטומטי כל {refreshInterval / 60000} דקות.</p>
+          <p className="text-sm text-muted">Auto refresh every {refreshInterval / 60000} minutes.</p>
         </div>
         <button
           onClick={async () => {
@@ -88,11 +88,11 @@ export const EntityPage = () => {
           }}
           className="rounded-full border border-primary px-5 py-2 text-sm font-semibold text-primary transition hover:bg-primary/10"
         >
-          רענון
+          Refresh data
         </button>
       </header>
       {error ? <p className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">{error}</p> : null}
-      {loading ? <p className="text-sm text-muted">טוען נתונים…</p> : null}
+      {loading ? <p className="text-sm text-muted">Loading data…</p> : null}
       <TableView fields={entity.fields} records={records} />
     </div>
   );

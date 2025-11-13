@@ -9,7 +9,11 @@ export const TableView = ({ fields, records }: TableViewProps) => {
   const visibleFields = fields;
 
   if (records.length === 0) {
-    return <p className="rounded-3xl border border-dashed border-soft bg-surface p-6 text-center text-sm text-muted">אין רשומות להצגה.</p>;
+    return (
+      <p className="rounded-3xl border border-dashed border-soft bg-surface p-6 text-center text-sm text-muted">
+        No records to display.
+      </p>
+    );
   }
 
   return (

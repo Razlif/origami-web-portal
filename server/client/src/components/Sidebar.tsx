@@ -88,13 +88,13 @@ export const Sidebar = () => {
             }}
             className="rounded-full border border-soft px-4 py-1 text-xs font-semibold text-muted transition hover:border-primary/40 hover:text-primary"
           >
-            יציאה
+            Sign out
           </button>
           <ThemeToggle />
         </div>
-        <div className="space-y-1 text-right">
-          <h1 className="text-xl font-semibold text-strong">פורטל אוריגמי</h1>
-          <p className="text-xs text-muted">לוח מחוונים לקריאה בלבד</p>
+        <div className="space-y-1">
+          <h1 className="text-xl font-semibold text-strong">Origami Portal</h1>
+          <p className="text-xs text-muted">Read-only dashboards</p>
         </div>
       </div>
 
@@ -156,7 +156,7 @@ export const Sidebar = () => {
               aria-expanded={!entitiesCollapsed}
             >
               <span>Entities</span>
-              <span aria-hidden>{entitiesCollapsed ? '▼' : '▲'}</span>
+              <span aria-hidden>{entitiesCollapsed ? '+' : '−'}</span>
             </button>
             {!entitiesCollapsed ? (
               <div className="space-y-1">
@@ -191,7 +191,7 @@ export const Sidebar = () => {
           disabled={busy}
           className="w-full rounded-full bg-primary px-4 py-3 font-semibold text-white shadow-soft transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
         >
-          רענון נתונים
+          Refresh data
         </button>
         {role === 'admin' ? (
           <button
@@ -199,7 +199,7 @@ export const Sidebar = () => {
             disabled={busy}
             className="w-full rounded-full border border-primary px-4 py-3 font-semibold text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-70"
           >
-            רענון מבנה
+            Refresh structure
           </button>
         ) : null}
       </div>

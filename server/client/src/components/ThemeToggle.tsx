@@ -37,12 +37,12 @@ export const ThemeToggle = () => {
       {theme === 'dark' ? (
         <>
           <MoonIcon />
-          <span>מצב לילה</span>
+          <span>Night mode</span>
         </>
       ) : (
         <>
           <SunIcon />
-          <span>מצב יום</span>
+          <span>Day mode</span>
         </>
       )}
     </button>

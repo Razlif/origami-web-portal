@@ -40,7 +40,7 @@ export const AdminUsersPage = () => {
         setError('');
       } catch (loadError) {
         console.error('Failed to load users', loadError);
-        setError('לא ניתן לטעון את רשימת המשתמשים.');
+        setError('Unable to load the user list.');
       } finally {
         setLoading(false);
       }
@@ -98,7 +98,7 @@ export const AdminUsersPage = () => {
   const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!form.username || !form.password) {
-      setError('שם משתמש וסיסמה הם שדות חובה.');
+      setError('Username and password are required.');
       return;
     }
     setCreating(true);
@@ -111,13 +111,13 @@ export const AdminUsersPage = () => {
       });
       setUsers((current) => [...current, created]);
       resetForm();
-      setFeedback('המשתמש נוצר בהצלחה.');
+      setFeedback('User created successfully.');
       setError('');
     } catch (createError: unknown) {
       console.error('Failed to create user', createError);
       const message =
         (createError as { response?: { data?: { message?: string } } }).response?.data?.message ??
-        'לא ניתן ליצור משתמש.';
+        'Unable to create user.';
       setError(message);
     } finally {
       setCreating(false);
@@ -155,13 +155,13 @@ export const AdminUsersPage = () => {
       }
       const updated = await updateUser(editingId, payload);
       setUsers((current) => current.map((user) => (user.id === updated.id ? updated : user)));
-      setFeedback('המשתמש עודכן בהצלחה.');
+      setFeedback('User updated successfully.');
       cancelEdit();
     } catch (updateError: unknown) {
       console.error('Failed to update user', updateError);
       const message =
         (updateError as { response?: { data?: { message?: string } } }).response?.data?.message ??
-        'לא ניתן לעדכן את המשתמש.';
+        'Unable to update the user.';
       setError(message);
     } finally {
       setActionInProgress(false);
@@ -170,19 +170,19 @@ export const AdminUsersPage = () => {
 
   const handleDelete = async (user: PortalUser) => {
     const confirmed = window.confirm(
-      `למחוק את המשתמש "${user.username}"? פעולה זו אינה ניתנת לביטול.`
+    `Delete user "${user.username}"? This action cannot be undone.`
     );
     if (!confirmed) return;
     setActionInProgress(true);
     try {
       await deleteUser(user.id);
       setUsers((current) => current.filter((entry) => entry.id !== user.id));
-      setFeedback('המשתמש הוסר.');
+      setFeedback('User removed.');
     } catch (deleteError: unknown) {
       console.error('Failed to delete user', deleteError);
       const message =
         (deleteError as { response?: { data?: { message?: string } } }).response?.data?.message ??
-        'לא ניתן למחוק את המשתמש.';
+        'Unable to delete the user.';
       setError(message);
     } finally {
       setActionInProgress(false);
@@ -192,18 +192,18 @@ export const AdminUsersPage = () => {
   return (
     <div className="flex-1 space-y-6 p-6 text-right">
       <header className="space-y-2">
-        <h2 className="text-2xl font-bold text-strong">ניהול משתמשים</h2>
-        <p className="text-sm text-muted">ניהול משתמשי הפורטל. הסיסמאות מאוחסנות בצורה מאובטחת באמצעות הצפנת bcrypt.</p>
+        <h2 className="text-2xl font-bold text-strong">User management</h2>
+        <p className="text-sm text-muted">Manage portal users. Passwords are stored securely with bcrypt hashing.</p>
       </header>
 
       <section className="panel space-y-6 p-6">
         <div className="space-y-1">
-          <h3 className="text-lg font-semibold text-strong">יצירת משתמש</h3>
-          <p className="text-sm text-muted">הזינו שם משתמש ייחודי, סיסמה בטוחה ובחרו תפקיד מתאים.</p>
+          <h3 className="text-lg font-semibold text-strong">Create user</h3>
+          <p className="text-sm text-muted">Provide a unique username, secure password, and choose a role.</p>
         </div>
         <form onSubmit={handleCreate} className="grid gap-4 md:grid-cols-3">
           <label className="text-sm">
-            <span className="mb-1 block text-xs font-semibold uppercase text-muted">שם משתמש</span>
+            <span className="mb-1 block text-xs font-semibold uppercase text-muted">Username</span>
             <input
               type="text"
               value={form.username}
@@ -213,7 +213,7 @@ export const AdminUsersPage = () => {
             />
           </label>
           <label className="text-sm">
-            <span className="mb-1 block text-xs font-semibold uppercase text-muted">סיסמה</span>
+            <span className="mb-1 block text-xs font-semibold uppercase text-muted">Password</span>
             <input
               type="password"
               value={form.password}
@@ -223,7 +223,7 @@ export const AdminUsersPage = () => {
             />
           </label>
           <label className="text-sm">
-            <span className="mb-1 block text-xs font-semibold uppercase text-muted">תפקיד</span>
+            <span className="mb-1 block text-xs font-semibold uppercase text-muted">Role</span>
             <select
               value={form.role}
               onChange={(event) =>
@@ -233,16 +233,16 @@ export const AdminUsersPage = () => {
             >
               {roleOptions.map((role) => (
                 <option key={role} value={role}>
-                  {role === 'admin' ? 'מנהל מערכת' : 'צופה'}
+                {role === 'admin' ? 'Admin' : 'Viewer'}
                 </option>
               ))}
             </select>
           </label>
           <div className="md:col-span-3 text-sm">
-            <span className="mb-1 block text-xs font-semibold uppercase text-muted">דפים נגישים</span>
+            <span className="mb-1 block text-xs font-semibold uppercase text-muted">Accessible pages</span>
             {createPagesDisabled ? (
               <p className="rounded-2xl border border-soft bg-surface-elevated px-4 py-3 text-xs text-muted">
-                מנהלי מערכת רואים את כל הדפים ואין צורך להקצות הרשאות ייחודיות.
+                Admins can access every page and do not require explicit assignments.
               </p>
             ) : sortedPages.length > 0 ? (
               <div className="grid gap-2 sm:grid-cols-2">
@@ -270,7 +270,7 @@ export const AdminUsersPage = () => {
               </div>
             ) : (
               <p className="rounded-2xl border border-dashed border-soft bg-surface-elevated px-4 py-3 text-xs text-muted">
-                אין דפים זמינים כרגע. צרו דפים באזור העיצוב ולאחר מכן שייכו אותם למשתמשים.
+                No pages are available yet. Create them in the builder and assign them to users here.
               </p>
             )}
           </div>
@@ -280,7 +280,7 @@ export const AdminUsersPage = () => {
               disabled={creating}
               className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white shadow-soft transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {creating ? 'שומר…' : 'הוספת משתמש'}
+              {creating ? 'Saving…' : 'Add user'}
             </button>
           </div>
         </form>
@@ -288,8 +288,8 @@ export const AdminUsersPage = () => {
 
       <section className="panel space-y-6 p-6">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-strong">משתמשים קיימים</h3>
-          {loading ? <span className="text-xs text-muted">טוען משתמשים…</span> : null}
+          <h3 className="text-lg font-semibold text-strong">Existing users</h3>
+          {loading ? <span className="text-xs text-muted">Loading users…</span> : null}
         </div>
         {error ? (
           <p className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">{error}</p>
@@ -301,12 +301,12 @@ export const AdminUsersPage = () => {
           <table className="min-w-full divide-y divide-[var(--color-border)] text-sm">
             <thead className="bg-surface-elevated">
               <tr>
-                <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-muted">שם משתמש</th>
-                <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-muted">תפקיד</th>
-                <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-muted">דפים</th>
-                <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-muted">נוצר</th>
-                <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-muted">עודכן</th>
-                <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-muted">פעולות</th>
+                <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-muted">Username</th>
+                <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-muted">Role</th>
+                <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-muted">Pages</th>
+                <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-muted">Created</th>
+                <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-muted">Updated</th>
+                <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-muted">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--color-border)] bg-surface">
@@ -316,10 +316,10 @@ export const AdminUsersPage = () => {
                   <td className="px-3 py-2 text-muted">{user.role}</td>
                   <td className="px-3 py-2 text-muted">
                     {user.role === 'admin'
-                      ? 'כל הדפים'
+                      ? 'All pages'
                       : user.allowedPages.length > 0
-                      ? `${user.allowedPages.length} דפים`
-                      : 'ללא'}
+                      ? `${user.allowedPages.length} pages`
+                      : 'None'}
                   </td>
                   <td className="px-3 py-2 text-muted">
                     {user.createdAt ? new Date(user.createdAt).toLocaleString() : '—'}
@@ -334,14 +334,14 @@ export const AdminUsersPage = () => {
                         disabled={actionInProgress}
                         className="rounded-full bg-surface-elevated px-3 py-1 text-xs font-semibold text-muted transition hover:bg-primary/10 hover:text-primary disabled:cursor-not-allowed disabled:opacity-70"
                       >
-                        עריכה
+                        Edit
                       </button>
                       <button
                         onClick={() => handleDelete(user)}
                         disabled={actionInProgress}
                         className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-600 transition hover:bg-red-200 disabled:cursor-not-allowed disabled:opacity-70"
                       >
-                        מחיקה
+                        Delete
                       </button>
                     </div>
                   </td>
@@ -350,7 +350,7 @@ export const AdminUsersPage = () => {
               {sortedUsers.length === 0 && !loading ? (
                 <tr>
                   <td colSpan={6} className="px-3 py-6 text-center text-sm text-muted">
-                    לא נמצאו משתמשים.
+                    No users found.
                   </td>
                 </tr>
               ) : null}
@@ -363,12 +363,12 @@ export const AdminUsersPage = () => {
         <div className="fixed inset-0 z-10 flex items-center justify-center bg-slate-900/60 p-4">
           <div className="w-full max-w-lg space-y-4 rounded-3xl border border-soft bg-surface p-6 shadow-soft">
             <div className="space-y-2 text-right">
-              <h3 className="text-lg font-semibold text-strong">עריכת משתמש</h3>
-              <p className="text-sm text-muted">עדכנו את פרטי המשתמש. השאירו את שדה הסיסמה ריק כדי להשאיר את הערך הקיים.</p>
+              <h3 className="text-lg font-semibold text-strong">Edit user</h3>
+              <p className="text-sm text-muted">Update the user details. Leave the password field blank to keep the current value.</p>
             </div>
             <form onSubmit={handleEditSubmit} className="space-y-4 text-right">
               <label className="text-sm">
-                <span className="mb-1 block text-xs font-semibold uppercase text-muted">שם משתמש</span>
+                <span className="mb-1 block text-xs font-semibold uppercase text-muted">Username</span>
                 <input
                   type="text"
                   value={editForm.username}
@@ -380,19 +380,19 @@ export const AdminUsersPage = () => {
                 />
               </label>
               <label className="text-sm">
-                <span className="mb-1 block text-xs font-semibold uppercase text-muted">סיסמה חדשה</span>
+                <span className="mb-1 block text-xs font-semibold uppercase text-muted">New password</span>
                 <input
                   type="password"
                   value={editForm.password}
                   onChange={(event) =>
                     setEditForm((state) => ({ ...state, password: event.target.value }))
                   }
-                  placeholder="השאירו ריק לשמירת הסיסמה הנוכחית"
+                  placeholder="Leave blank to keep the current password"
                   className="w-full rounded-full border border-soft bg-surface px-4 py-3 text-sm text-strong focus:border-primary focus:outline-none"
                 />
               </label>
               <label className="text-sm">
-                <span className="mb-1 block text-xs font-semibold uppercase text-muted">תפקיד</span>
+                <span className="mb-1 block text-xs font-semibold uppercase text-muted">Role</span>
                 <select
                   value={editForm.role}
                   onChange={(event) =>
@@ -402,16 +402,16 @@ export const AdminUsersPage = () => {
                 >
                   {roleOptions.map((role) => (
                     <option key={role} value={role}>
-                      {role === 'admin' ? 'מנהל מערכת' : 'צופה'}
+                      {role === 'admin' ? 'Admin' : 'Viewer'}
                     </option>
                   ))}
                 </select>
               </label>
               <div className="space-y-2 text-sm">
-                <span className="mb-1 block text-xs font-semibold uppercase text-muted">דפים נגישים</span>
+                <span className="mb-1 block text-xs font-semibold uppercase text-muted">Accessible pages</span>
                 {editPagesDisabled ? (
                   <p className="rounded-2xl border border-soft bg-surface-elevated px-4 py-3 text-xs text-muted">
-                    מנהלי מערכת רואים את כל הדפים ואין צורך לעדכן הרשאות.
+                    Admins can access every page and do not require page assignments.
                   </p>
                 ) : sortedPages.length > 0 ? (
                   <div className="grid gap-2 sm:grid-cols-2">
@@ -439,7 +439,7 @@ export const AdminUsersPage = () => {
                   </div>
                 ) : (
                   <p className="rounded-2xl border border-dashed border-soft bg-surface-elevated px-4 py-3 text-xs text-muted">
-                    אין דפים זמינים כרגע.
+                    No pages available yet.
                   </p>
                 )}
               </div>
@@ -449,14 +449,14 @@ export const AdminUsersPage = () => {
                   disabled={actionInProgress}
                   className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white shadow-soft transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  {actionInProgress ? 'שומר…' : 'שמירת שינויים'}
+                  {actionInProgress ? 'Saving…' : 'Save changes'}
                 </button>
                 <button
                   type="button"
                   onClick={cancelEdit}
                   className="rounded-full border border-soft px-5 py-2 text-sm font-semibold text-muted transition hover:border-primary/40 hover:text-primary"
                 >
-                  ביטול
+                  Cancel
                 </button>
               </div>
             </form>
