@@ -74,3 +74,5 @@ The backend proxies Origami endpoints, caches responses for the configured durat
 ## Deployment tips
 
 - Back up `server/data/` or replace the file stores with your own persistence layer if you need redundancy.
+
+- after you add a widget save the page and refresh  to view it
