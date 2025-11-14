@@ -13,6 +13,8 @@ interface DashboardCanvasProps {
   canEdit: boolean;
   dataMap: Record<string, OrigamiRecord[]>;
   entityLookup: Record<string, EntityDefinition>;
+  widgetLoading: Record<string, boolean>;
+  widgetErrors: Record<string, string>;
   onLayoutChange: (layouts: Array<{ id: string; x: number; y: number; w: number; h: number }>) => void;
   onEditWidget: (widget: WidgetConfig) => void;
   onRemoveWidget: (id: string) => void;
@@ -95,6 +97,8 @@ const WidgetCard = ({
   canEdit,
   records,
   entity,
+  loading,
+  error,
   onEditWidget,
   onRemoveWidget
 }: {
@@ -103,6 +107,8 @@ const WidgetCard = ({
   canEdit: boolean;
   records: OrigamiRecord[];
   entity?: EntityDefinition;
+  loading: boolean;
+  error?: string;
   onEditWidget: (widget: WidgetConfig) => void;
   onRemoveWidget: (id: string) => void;
 }) => (
@@ -139,7 +145,17 @@ const WidgetCard = ({
         ) : null}
       </div>
       <div className="flex-1 overflow-hidden p-3">
-        <WidgetPreview widget={widget} records={records} entity={entity} canEdit={canEdit} />
+        {loading ? (
+          <div className="flex h-full items-center justify-center rounded-2xl border border-dashed border-soft bg-surface p-6 text-xs text-muted">
+            Loading widget data…
+          </div>
+        ) : error ? (
+          <div className="flex h-full items-center justify-center rounded-2xl border border-red-200 bg-red-50/40 p-6 text-center text-xs text-red-600">
+            {error}
+          </div>
+        ) : (
+          <WidgetPreview widget={widget} records={records} entity={entity} canEdit={canEdit} />
+        )}
       </div>
       {editMode ? (
         <div className="pointer-events-none absolute inset-0 rounded-3xl border-2 border-dashed border-primary/30" aria-hidden />
@@ -154,6 +170,8 @@ export const DashboardCanvas = ({
   canEdit,
   dataMap,
   entityLookup,
+  widgetLoading,
+  widgetErrors,
   onLayoutChange,
   onEditWidget,
   onRemoveWidget
@@ -199,6 +217,8 @@ export const DashboardCanvas = ({
             canEdit={canEdit}
             records={dataMap[widget.id] ?? []}
             entity={entityLookup[widget.entity]}
+            loading={Boolean(widgetLoading[widget.id])}
+            error={widgetErrors[widget.id]}
             onEditWidget={onEditWidget}
             onRemoveWidget={onRemoveWidget}
           />

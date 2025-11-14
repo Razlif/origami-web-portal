@@ -958,6 +958,46 @@ const evaluateFilter = (recordValue, operator, targetValue) => {
   }
 };
 
+const allowedWidgetTypes = new Set(['table', 'bar', 'line', 'pie']);
+const allowedAggregations = new Set(['count', 'sum', 'avg']);
+const allowedFilterOperators = new Set(['=', '!=', '>', '>=', '<', '<=', 'contains']);
+
+const sanitizeWidgetConfig = (payload = {}) => {
+  const type = allowedWidgetTypes.has(payload?.type) ? payload.type : 'table';
+  const aggregation = allowedAggregations.has(payload?.aggregation) ? payload.aggregation : 'count';
+  const fields = Array.isArray(payload?.fields)
+    ? payload.fields.map((field) => (field == null ? '' : String(field).trim())).filter(Boolean)
+    : [];
+  const filters = Array.isArray(payload?.filters)
+    ? payload.filters
+        .map((filter) => {
+          const field = filter?.field?.toString().trim();
+          const operator = allowedFilterOperators.has(filter?.operator) ? filter.operator : '=';
+          const rawValue = filter?.value;
+          const value = rawValue == null ? '' : String(rawValue).trim();
+          if (!field || !value) {
+            return null;
+          }
+          return { field, operator, value };
+        })
+        .filter(Boolean)
+    : [];
+
+  return {
+    id: payload?.id ?? '',
+    title: payload?.title?.toString().trim() || 'Widget',
+    type,
+    entity: payload?.entity ?? '',
+    fields,
+    aggregation,
+    x: Math.max(0, Math.round(Number(payload?.x ?? 0))),
+    y: Math.max(0, Math.round(Number(payload?.y ?? 0))),
+    w: Math.max(1, Math.min(12, Math.round(Number(payload?.w ?? 4)))),
+    h: Math.max(1, Math.min(12, Math.round(Number(payload?.h ?? 4)))),
+    filters
+  };
+};
+
 const applyWidgetFilters = (records, filters = [], context) => {
   if (!Array.isArray(filters) || filters.length === 0) {
     return records;
@@ -995,8 +1035,11 @@ app.get('/api/connection/test', authenticate, requireAdmin, async (_req, res) =>
 
 app.post('/api/structure/fetch', authenticate, requireAdmin, async (_req, res) => {
   try {
-    const structure = await fetchStructureFromOrigami();
-    res.json(structure);
+    const currentStructure = await readStructureFromFile();
+    res.json(currentStructure);
+    fetchStructureFromOrigami().catch((error) => {
+      console.error('Background structure refresh failed', error.response?.data || error.message);
+    });
   } catch (error) {
     res.status(500).json({
       message: 'Failed to fetch structure from Origami',
@@ -1038,6 +1081,21 @@ app.get('/api/widgets/:widgetId/data', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Failed to load widget data', error);
     res.status(500).json({ message: 'Unable to load widget data' });
+  }
+});
+
+app.post('/api/widgets/preview', authenticate, async (req, res) => {
+  try {
+    const widget = sanitizeWidgetConfig(req.body ?? {});
+    if (!widget.entity) {
+      return res.status(400).json({ message: 'Widget entity is required' });
+    }
+    const data = await loadEntityData(widget.entity);
+    const filtered = applyWidgetFilters(data, widget.filters, { user: req.user });
+    res.json({ records: filtered });
+  } catch (error) {
+    console.error('Failed to generate widget preview', error);
+    res.status(500).json({ message: 'Unable to generate widget preview' });
   }
 });
 

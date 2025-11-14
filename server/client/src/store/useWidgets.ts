@@ -1,10 +1,45 @@
 import { create } from 'zustand';
 import { nanoid } from 'nanoid/non-secure';
 import type { DashboardPage, WidgetAggregation, WidgetConfig, WidgetFilter, WidgetType } from '../types';
-import { fetchPagesFromApi, logPageStructure, publishPageToApi, savePagesToApi } from './usePages';
+import { fetchPagesFromApi, logPageStructure, publishPageToApi, savePagesToApi, unpublishPageToApi } from './usePages';
 
-const STORAGE_KEY = 'origami:pages';
+export const PAGES_STORAGE_KEY = 'origami:pages';
 const STORAGE_VERSION = 5;
+const STORAGE_STATE = { version: STORAGE_VERSION };
+
+const safeLocalStorageGet = (key: string) => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  try {
+    return window.localStorage.getItem(key);
+  } catch (error) {
+    console.warn('Unable to read cached dashboard pages', error);
+    return null;
+  }
+};
+
+const safeLocalStorageSet = (key: string, value: string) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  try {
+    window.localStorage.setItem(key, value);
+  } catch (error) {
+    console.warn('Unable to persist dashboard pages', error);
+  }
+};
+
+export const clearPagesCache = () => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  try {
+    window.localStorage.removeItem(PAGES_STORAGE_KEY);
+  } catch (error) {
+    console.warn('Unable to clear cached dashboard pages', error);
+  }
+};
 
 const MIN_WIDTH = 1;
 const MAX_WIDTH = 12;
@@ -97,14 +132,11 @@ const normalizePage = (page: Partial<DashboardPage>): DashboardPage => {
 const createPage = (name: string): DashboardPage => normalizePage({ name, published: false, widgets: [] });
 
 const loadLocalState = (): { pages: DashboardPage[]; activePageId: string } => {
-  if (typeof window === 'undefined') {
+  const stored = safeLocalStorageGet(PAGES_STORAGE_KEY);
+  if (!stored) {
     return { pages: [], activePageId: '' };
   }
   try {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (!stored) {
-      return { pages: [], activePageId: '' };
-    }
     const parsed = JSON.parse(stored);
     if (parsed && Array.isArray(parsed.pages)) {
       const pages = parsed.pages.map((page: DashboardPage) => normalizePage(page));
@@ -117,23 +149,16 @@ const loadLocalState = (): { pages: DashboardPage[]; activePageId: string } => {
       return { pages: [legacyPage], activePageId: legacyPage.id };
     }
   } catch (error) {
-    console.warn('Unable to load cached dashboard pages', error);
+    console.warn('Unable to parse cached dashboard pages', error);
   }
   return { pages: [], activePageId: '' };
 };
 
 const persistLocalState = (pages: DashboardPage[], activePageId: string) => {
-  if (typeof window === 'undefined') {
-    return;
-  }
-  try {
-    window.localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ pages, activePageId, version: STORAGE_VERSION })
-    );
-  } catch (error) {
-    console.warn('Unable to persist dashboard pages', error);
-  }
+  safeLocalStorageSet(
+    PAGES_STORAGE_KEY,
+    JSON.stringify({ pages, activePageId, ...STORAGE_STATE })
+  );
 };
 
 let pendingLoad: Promise<void> | null = null;
@@ -145,9 +170,10 @@ interface WidgetsState {
   editMode: boolean;
   dirty: boolean;
   hydrated: boolean;
+  reset: () => void;
   load: () => Promise<void>;
   savePages: () => Promise<void>;
-  publishPage: (pageId: string) => Promise<void>;
+  setPagePublished: (pageId: string, published: boolean) => Promise<void>;
   addPage: (name?: string) => void;
   renamePage: (id: string, name: string) => void;
   updatePage: (id: string, partial: Partial<Pick<DashboardPage, 'name' | 'published'>>) => void;
@@ -188,6 +214,17 @@ export const useWidgets = create<WidgetsState>((set, get) => {
     editMode: false,
     dirty: false,
     hydrated: false,
+    reset() {
+      set({
+        pages: [],
+        activePageId: '',
+        widgets: [],
+        editMode: false,
+        dirty: false,
+        hydrated: false
+      });
+      clearPagesCache();
+    },
     async load() {
       if (pendingLoad) {
         await pendingLoad;
@@ -247,17 +284,26 @@ export const useWidgets = create<WidgetsState>((set, get) => {
       logPageStructure(pages, 'save');
       set((state) => ({ ...state, dirty: false }));
     },
-    async publishPage(pageId) {
+    async setPagePublished(pageId, published) {
       const currentPages = get().pages;
       const target = currentPages.find((page) => page.id === pageId);
       if (!target) {
-        console.warn(`Cannot publish missing page ${pageId}`);
+        console.warn(`Cannot update missing page ${pageId}`);
         return;
       }
-      const published = await publishPageToApi(pageId);
-      const pages = currentPages.map((page) => (page.id === pageId ? { ...page, published: true } : page));
+      try {
+        if (published) {
+          await publishPageToApi(pageId);
+        } else {
+          await unpublishPageToApi(pageId);
+        }
+      } catch (error) {
+        console.error('Failed to update publish state', error);
+        return;
+      }
+      const pages = currentPages.map((page) => (page.id === pageId ? { ...page, published } : page));
       applyPagesUpdate(pages, pageId, false);
-      console.info(`🚀 Published page "${published?.name ?? target.name}"`);
+      console.info(published ? `???? Published page "${target.name}"` : `??'? Unpublished page "${target.name}"`);
     },
     addPage(name) {
       const state = get();
@@ -299,13 +345,13 @@ export const useWidgets = create<WidgetsState>((set, get) => {
     },
     removePage(id) {
       const state = get();
-      if (state.pages.length <= 1) {
-        console.warn('Cannot remove the last dashboard page.');
-        return;
-      }
-      const pages = state.pages.filter((page) => page.id !== id);
+      let pages = state.pages.filter((page) => page.id !== id);
       if (pages.length === state.pages.length) {
         return;
+      }
+      if (pages.length === 0) {
+        const replacement = createPage('Dashboard');
+        pages = [replacement];
       }
       const nextActive = resolveActivePage(pages, state.activePageId === id ? undefined : state.activePageId);
       applyPagesUpdate(pages, nextActive);

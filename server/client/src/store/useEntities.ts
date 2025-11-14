@@ -19,7 +19,9 @@ const normalizeEntity = (entity: EntityDefinition): EntityDefinition => {
     ? entity.fields
         .map((field) => {
           const name = field?.name ?? field?.dataName;
-          if (!name) return null;
+          if (!name) {
+            return null;
+          }
           return {
             ...field,
             name,
@@ -32,16 +34,17 @@ const normalizeEntity = (entity: EntityDefinition): EntityDefinition => {
         .filter((field): field is EntityField => Boolean(field))
     : [];
 
-  const groups = Array.isArray(entity?.groups) && entity.groups.length > 0
-    ? entity.groups.map((group) => ({
-        ...group,
-        fields: Array.isArray(group?.fields) ? group.fields : [],
-        permissions:
-          group?.permissions && typeof group.permissions === 'object'
-            ? group.permissions
-            : {}
-      }))
-    : [createFallbackGroup(entity?.name ?? entity?.dataName ?? 'entity', fields)];
+  const groups =
+    Array.isArray(entity?.groups) && entity.groups.length > 0
+      ? entity.groups.map((group) => ({
+          ...group,
+          fields: Array.isArray(group?.fields) ? group.fields : [],
+          permissions:
+            group?.permissions && typeof group.permissions === 'object'
+              ? group.permissions
+              : {}
+        }))
+      : [createFallbackGroup(entity?.name ?? entity?.dataName ?? 'entity', fields)];
 
   return {
     ...entity,
@@ -53,24 +56,6 @@ const normalizeEntity = (entity: EntityDefinition): EntityDefinition => {
   };
 };
 
-const logStructureSummary = (entities: EntityDefinition[]) => {
-  if (entities.length === 0) {
-    console.info('Origami structure → (no entities available)');
-    return;
-  }
-  console.groupCollapsed('Origami structure');
-  for (const entity of entities) {
-    const entityLabel = entity.label ?? entity.name;
-    console.log(`→ ${entityLabel} (${entity.fields.length} fields)`);
-    for (const group of entity.groups) {
-      const fieldNames = group.fields.map((field) => field.label ?? field.name).join(', ');
-      const repeatableSuffix = group.repeatable ? ' (repeatable)' : '';
-      console.log(`   ↳ ${group.name}${repeatableSuffix}${fieldNames ? ` → ${fieldNames}` : ''}`);
-    }
-  }
-  console.groupEnd();
-};
-
 export const useEntities = create<EntitiesState>((set) => ({
   entities: [],
   setStructure(entities) {
@@ -78,10 +63,8 @@ export const useEntities = create<EntitiesState>((set) => ({
       console.warn('Attempted to set Origami structure with an invalid entities payload.', entities);
       return;
     }
-    const normalizedEntities = entities.map(normalizeEntity).filter((entity) => entity.name);
-    set({ entities: normalizedEntities });
-    console.info(`✅ Loaded entities: ${normalizedEntities.length}`);
-    logStructureSummary(normalizedEntities);
+    const normalized = entities.map(normalizeEntity).filter((entity) => entity.name);
+    set({ entities: normalized });
   }
 }));
 

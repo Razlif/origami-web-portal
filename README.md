@@ -43,6 +43,7 @@ The backend installs the React client automatically when needed and bootstraps a
 | `PORTAL_CACHE_DURATION` / `PORTAL_REFRESH_INTERVAL` | Control API caching and auto-refresh intervals. |
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD` | Seed admin account written to `data/users.json` on first run. |
 | `JWT_SECRET` | Secret used to sign one-hour JWT sessions. |
+| `VITE_API_TIMEOUT` (optional) | Override the default 60s client timeout for API requests. |
 
 The server builds the Origami API base as https://<ORIGAMI_ENVIRONMENT>.origami.ms/entities/api, so only set ORIGAMI_ENVIRONMENT to the short environment name.
 

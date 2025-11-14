@@ -3,6 +3,14 @@ import axios from 'axios';
 let authToken: string | null = null;
 let unauthorizedHandler: (() => void) | null = null;
 
+const resolveTimeout = () => {
+  const candidate =
+    typeof import.meta !== 'undefined'
+      ? Number(import.meta.env.VITE_API_TIMEOUT ?? import.meta.env.API_TIMEOUT ?? 60000)
+      : 60000;
+  return Number.isFinite(candidate) && candidate > 0 ? candidate : 60000;
+};
+
 export const setApiToken = (token: string | null) => {
   authToken = token;
 };
@@ -13,7 +21,7 @@ export const registerUnauthorizedHandler = (handler: () => void) => {
 
 export const api = axios.create({
   baseURL: '/api',
-  timeout: 15000
+  timeout: resolveTimeout()
 });
 
 api.interceptors.request.use((config) => {

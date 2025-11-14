@@ -18,6 +18,7 @@ export const Sidebar = () => {
   const { role, logout } = useSession();
   const { pages, activePageId, setActivePage, addPage } = usePages();
   const [busy, setBusy] = useState(false);
+  const [refreshMessage, setRefreshMessage] = useState<string | null>(null);
   const [entitiesCollapsed, setEntitiesCollapsed] = useState<boolean>(() => {
     if (typeof window === 'undefined') {
       return false;
@@ -49,6 +50,14 @@ export const Sidebar = () => {
     }
   }, [entitiesCollapsed]);
 
+  useEffect(() => {
+    if (!refreshMessage) {
+      return;
+    }
+    const timer = window.setTimeout(() => setRefreshMessage(null), 5000);
+    return () => window.clearTimeout(timer);
+  }, [refreshMessage]);
+
   const handleRefreshData = async () => {
     setBusy(true);
     try {
@@ -56,6 +65,13 @@ export const Sidebar = () => {
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('origami:data-refresh'));
       }
+      setRefreshMessage('Data cache cleared. Widgets will reload shortly.');
+    } catch (error) {
+      const message =
+        (error as { response?: { data?: { message?: string } } }).response?.data?.message ??
+        (error instanceof Error ? error.message : 'Failed to refresh Origami data.');
+      console.error('Failed to refresh Origami data', error);
+      setRefreshMessage(`Unable to refresh data: ${message}`);
     } finally {
       setBusy(false);
     }
@@ -66,6 +82,13 @@ export const Sidebar = () => {
     try {
       const structure = await refreshStructure();
       setStructure(structure.entities);
+      setRefreshMessage('Structure refresh triggered. Latest layout will load when ready.');
+    } catch (error) {
+      const message =
+        (error as { response?: { data?: { message?: string } } }).response?.data?.message ??
+        (error instanceof Error ? error.message : 'Failed to refresh structure.');
+      console.error('Failed to refresh Origami structure', error);
+      setRefreshMessage(`Unable to refresh structure: ${message}`);
     } finally {
       setBusy(false);
     }
@@ -185,24 +208,29 @@ export const Sidebar = () => {
         ) : null}
       </nav>
 
-      <div className="mt-6 space-y-3 border-t border-soft pt-4 text-sm text-right">
-        <button
-          onClick={handleRefreshData}
-          disabled={busy}
-          className="w-full rounded-full bg-primary px-4 py-3 font-semibold text-white shadow-soft transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
-        >
-          Refresh data
-        </button>
-        {role === 'admin' ? (
+      {role === 'admin' ? (
+        <div className="mt-6 space-y-3 border-t border-soft pt-4 text-sm text-right">
+          {refreshMessage ? (
+            <p className="text-xs text-muted">{refreshMessage}</p>
+          ) : null}
           <button
+            type="button"
+            onClick={handleRefreshData}
+            disabled={busy}
+            className="w-full rounded-full bg-primary px-4 py-3 font-semibold text-white shadow-soft transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            Refresh data
+          </button>
+          <button
+            type="button"
             onClick={handleRefreshStructure}
             disabled={busy}
             className="w-full rounded-full border border-primary px-4 py-3 font-semibold text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-70"
           >
             Refresh structure
           </button>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
     </aside>
   );
 };

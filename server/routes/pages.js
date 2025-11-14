@@ -212,5 +212,40 @@ router.post('/:id/publish', async (req, res) => {
   }
 });
 
+router.post('/:id/unpublish', async (req, res) => {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Admin privileges required' });
+  }
+
+  try {
+    const pageId = req.params.id;
+    if (!pageId) {
+      return res.status(400).json({ message: 'Page id is required' });
+    }
+    const pages = await readPagesFile();
+    let updatedPage = null;
+    const nextPages = pages.map((page) => {
+      if (page.id !== pageId) {
+        return page;
+      }
+      updatedPage = { ...page, published: false };
+      return updatedPage;
+    });
+
+    if (!updatedPage) {
+      return res.status(404).json({ message: 'Page not found' });
+    }
+
+    await ensurePagesFile();
+    await writePagesFile(nextPages);
+    console.log(`�?'� Unpublished page "${updatedPage.name}" via API`);
+    logPagesSummary(nextPages, 'POST /api/pages/:id/unpublish');
+    res.json({ page: updatedPage, pages: nextPages });
+  } catch (error) {
+    console.error('Failed to unpublish dashboard page', error);
+    res.status(500).json({ message: 'Unable to unpublish page' });
+  }
+});
+
 export { ensurePagesFile, pagesPath, readPagesFile };
 export default router;

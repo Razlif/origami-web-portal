@@ -26,10 +26,16 @@ const AdminRoute = ({ children }: { children: JSX.Element }) => {
 };
 
 export const App = () => {
-  const { isAuthenticated } = useSession();
+  const { isAuthenticated, user, fetchProfile } = useSession();
   const { setStructure } = useEntities();
   const [initializing, setInitializing] = useState(true);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (isAuthenticated && !user) {
+      void fetchProfile();
+    }
+  }, [isAuthenticated, user, fetchProfile]);
 
   useEffect(() => {
     if (!isAuthenticated) {

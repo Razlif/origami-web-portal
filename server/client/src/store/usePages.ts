@@ -42,6 +42,16 @@ export const publishPageToApi = async (pageId: string) => {
   }
 };
 
+export const unpublishPageToApi = async (pageId: string) => {
+  try {
+    const response = await api.post<{ page?: DashboardPage }>(`/pages/${pageId}/unpublish`);
+    return response.data?.page;
+  } catch (error) {
+    console.error('Failed to unpublish dashboard page', error);
+    throw error;
+  }
+};
+
 export const logPageStructure = (pages: DashboardPage[], context: string) => {
   if (import.meta.env.PROD) {
     return;

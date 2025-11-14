@@ -26,7 +26,7 @@ export const usePages = () => {
     savePages: useWidgets((state) => state.savePages),
     updatePage: useWidgets((state) => state.updatePage),
     addWidget: useWidgets((state) => state.addWidget),
-    publishPage: useWidgets((state) => state.publishPage)
+    setPagePublished: useWidgets((state) => state.setPagePublished)
   };
 };
 

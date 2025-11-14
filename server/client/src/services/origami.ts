@@ -51,6 +51,11 @@ export const fetchWidgetRecords = async (widgetId: string): Promise<OrigamiRecor
   return Array.isArray(response.data?.records) ? response.data.records : [];
 };
 
+export const fetchWidgetPreview = async (widget: WidgetConfig): Promise<OrigamiRecord[]> => {
+  const response = await api.post('/widgets/preview', widget);
+  return Array.isArray(response.data?.records) ? response.data.records : [];
+};
+
 export const refreshEntityData = async (entity: string): Promise<OrigamiRecord[]> => {
   const response = await api.post(`/data/${entity}/refresh`);
   return response.data;

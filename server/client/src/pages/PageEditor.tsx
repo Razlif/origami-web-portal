@@ -5,7 +5,7 @@ import WidgetModal from '../components/WidgetModal';
 import { usePages } from '../hooks/usePages';
 import { useEntities } from '../store/useEntities';
 import { useSession } from '../store/useSession';
-import { fetchWidgetRecords } from '../services/origami';
+import { fetchWidgetPreview, fetchWidgetRecords } from '../services/origami';
 import type { EntityDefinition, OrigamiRecord, WidgetConfig } from '../types';
 
 const buildEntityLookup = (entities: EntityDefinition[]) =>
@@ -33,14 +33,18 @@ export const PageEditor = () => {
     savePages,
     renamePage,
     removePage,
-    publishPage,
+    setPagePublished,
     applyLayout
   } = usePages();
   const { entities } = useEntities();
   const [dataMap, setDataMap] = useState<Record<string, OrigamiRecord[]>>({});
   const [loading, setLoading] = useState(false);
+  const [widgetLoading, setWidgetLoading] = useState<Record<string, boolean>>({});
+  const [widgetErrors, setWidgetErrors] = useState<Record<string, string>>({});
   const [modalOpen, setModalOpen] = useState(false);
   const [editingWidget, setEditingWidget] = useState<WidgetConfig | null>(null);
+  const [editActionPending, setEditActionPending] = useState(false);
+  const [publishPending, setPublishPending] = useState(false);
 
   const canEdit = role === 'admin';
 
@@ -56,33 +60,6 @@ export const PageEditor = () => {
 
   const entityLookup = useMemo(() => buildEntityLookup(entities), [entities]);
 
-  useEffect(() => {
-    if (!hydrated || pages.length === 0) {
-      return;
-    }
-    const candidateId = pageId && pages.some((page) => page.id === pageId) ? pageId : activePageId;
-    if (!candidateId) {
-      const fallback = viewablePages[0]?.id;
-      if (fallback) {
-        setActivePage(fallback);
-        navigate(`/pages/${fallback}`, { replace: true });
-      }
-      return;
-    }
-    if (candidateId !== activePageId) {
-      setActivePage(candidateId);
-    }
-    if (candidateId && candidateId !== pageId) {
-      navigate(`/pages/${candidateId}`, { replace: true });
-    }
-  }, [pageId, pages, activePageId, viewablePages, hydrated, setActivePage, navigate]);
-
-  useEffect(() => {
-    if (!canEdit && editMode) {
-      setEditMode(false);
-    }
-  }, [canEdit, editMode, setEditMode]);
-
   const widgetDataSignature = useMemo(() => {
     if (!activePage) {
       return '';
@@ -97,6 +74,8 @@ export const PageEditor = () => {
     let cancelled = false;
     if (!activePage || activePage.widgets.length === 0) {
       setDataMap({});
+      setWidgetLoading({});
+      setWidgetErrors({});
       setLoading(false);
       return;
     }
@@ -120,26 +99,85 @@ export const PageEditor = () => {
 
     if (groups.size === 0) {
       setDataMap({});
+      setWidgetLoading({});
+      setWidgetErrors({});
       setLoading(false);
       return;
     }
 
+    const loadPreview = async (
+      group: { widgetIds: string[]; representative: string },
+      representativeWidget: WidgetConfig,
+      fallbackMessage?: string
+    ) => {
+      const friendly =
+        fallbackMessage ?? 'Save the page and refresh to view this widget.';
+      try {
+        const preview = await fetchWidgetPreview(representativeWidget);
+        return group.widgetIds.map((id) => ({ id, records: preview, error: null as string | null }));
+      } catch (previewError) {
+        console.error('Failed to generate widget preview', { widgetId: group.representative, error: previewError });
+        const message =
+          (previewError as { response?: { data?: { message?: string } } }).response?.data?.message ??
+          friendly;
+        return group.widgetIds.map((id) => ({ id, records: [], error: message }));
+      }
+    };
+
     const load = async () => {
       setLoading(true);
+      const pendingState: Record<string, boolean> = {};
+      activePage.widgets.forEach((widget) => {
+        pendingState[widget.id] = true;
+      });
+      setWidgetLoading(pendingState);
+      setWidgetErrors({});
       try {
         const results = await Promise.all(
           Array.from(groups.values()).map(async (group) => {
+            const representativeWidget = activePage.widgets.find((widget) => widget.id === group.representative);
+            if (!representativeWidget) {
+              return group.widgetIds.map((id) => ({
+                id,
+                records: [],
+                error: 'Widget configuration missing.'
+              }));
+            }
+            if (dirty) {
+              return loadPreview(group, representativeWidget);
+            }
             try {
               const response = await fetchWidgetRecords(group.representative);
-              return group.widgetIds.map((id) => [id, response] as const);
+              return group.widgetIds.map((id) => ({ id, records: response, error: null as string | null }));
             } catch (error) {
+              const status = (error as { response?: { status?: number } }).response?.status;
+              if (status === 404) {
+                return loadPreview(group, representativeWidget, 'Save the page and refresh to view this widget.');
+              }
               console.error('Failed to load widget data', { widgetId: group.representative, error });
-              return group.widgetIds.map((id) => [id, []] as const);
+              const message =
+                (error as { response?: { data?: { message?: string } } }).response?.data?.message ??
+                (error instanceof Error ? error.message : 'Unable to load widget data.');
+              return group.widgetIds.map((id) => ({ id, records: [], error: message }));
             }
           })
         );
         if (!cancelled) {
-          setDataMap(Object.fromEntries(results.flat()));
+          const flat = results.flat();
+          const nextData = Object.fromEntries(flat.map(({ id, records }) => [id, records]));
+          const nextLoadingState = flat.reduce<Record<string, boolean>>((acc, item) => {
+            acc[item.id] = false;
+            return acc;
+          }, {});
+          const nextErrors = flat.reduce<Record<string, string>>((acc, item) => {
+            if (item.error) {
+              acc[item.id] = item.error;
+            }
+            return acc;
+          }, {});
+          setDataMap(nextData);
+          setWidgetLoading((prev) => ({ ...prev, ...nextLoadingState }));
+          setWidgetErrors(nextErrors);
         }
       } finally {
         if (!cancelled) {
@@ -153,8 +191,7 @@ export const PageEditor = () => {
     return () => {
       cancelled = true;
     };
-  }, [activePage, widgetDataSignature]);
-
+  }, [activePage, widgetDataSignature, dirty]);
   const handleAddWidget = () => {
     setEditingWidget(null);
     setModalOpen(true);
@@ -204,9 +241,33 @@ export const PageEditor = () => {
     }
   };
 
-  const handlePublish = async () => {
+  const handleEditToggle = async () => {
+    if (!canEdit) return;
+    if (!editMode) {
+      setEditMode(true);
+      return;
+    }
+    setEditActionPending(true);
+    try {
+      if (dirty) {
+        await savePages();
+      }
+    } catch (error) {
+      console.error('Failed to save page', error);
+    } finally {
+      setEditActionPending(false);
+      setEditMode(false);
+    }
+  };
+
+  const handleTogglePublish = async () => {
     if (!activePage || !canEdit) return;
-    await publishPage(activePage.id);
+    setPublishPending(true);
+    try {
+      await setPagePublished(activePage.id, !activePage.published);
+    } finally {
+      setPublishPending(false);
+    }
   };
 
   const handleLayoutChange = useCallback(
@@ -251,42 +312,45 @@ export const PageEditor = () => {
         {canEdit ? (
           <div className="flex flex-wrap items-center justify-end gap-2">
             <button
+              type="button"
               onClick={handleAddWidget}
               className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white shadow-soft transition hover:bg-primary/90"
             >
               + Add widget
             </button>
             <button
-              onClick={() => void savePages()}
-              disabled={!dirty}
-              className="rounded-full border border-primary px-4 py-2 text-sm font-semibold text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Save page
-            </button>
-            <button
-              onClick={() => setEditMode(!editMode)}
+              type="button"
+              onClick={handleEditToggle}
+              disabled={editActionPending}
               className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
                 editMode
                   ? 'border-primary bg-primary/10 text-primary'
                   : 'border-soft text-muted hover:border-primary/40 hover:text-primary'
-              }`}
+              } disabled:cursor-not-allowed`}
             >
-              {editMode ? 'Editing layout' : 'Edit layout'}
+              {editMode ? (editActionPending ? 'Saving…' : 'Save changes') : 'Edit page'}
             </button>
             <button
-              onClick={handlePublish}
-              disabled={activePage.published}
-              className="rounded-full border border-emerald-400 px-4 py-2 text-sm font-semibold text-emerald-600 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+              type="button"
+              onClick={handleTogglePublish}
+              disabled={publishPending}
+              className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                activePage.published
+                  ? 'border-amber-300 text-amber-600 hover:bg-amber-50'
+                  : 'border-emerald-400 text-emerald-600 hover:bg-emerald-50'
+              } disabled:cursor-not-allowed disabled:opacity-60`}
             >
-              Publish page
+              {publishPending ? 'Updating…' : activePage.published ? 'Unpublish page' : 'Publish page'}
             </button>
             <button
+              type="button"
               onClick={handleRenamePage}
               className="rounded-full border border-soft px-4 py-2 text-xs font-semibold text-muted transition hover:border-primary/40 hover:text-primary"
             >
               Rename
             </button>
             <button
+              type="button"
               onClick={handleDeletePage}
               className="rounded-full border border-red-200 px-4 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50"
             >
@@ -312,6 +376,8 @@ export const PageEditor = () => {
             onRemoveWidget={removeWidget}
             entityLookup={entityLookup}
             dataMap={dataMap}
+            widgetLoading={widgetLoading}
+            widgetErrors={widgetErrors}
             canEdit={canEdit}
           />
         </div>
